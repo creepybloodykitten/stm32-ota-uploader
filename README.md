@@ -1,6 +1,6 @@
 ### stm32-ota-uploader  
 
-#spot firmware update system of stm32 everywhere with connection to host raspberry pi 4
+# spot firmware update system of stm32 everywhere with connection to host raspberry pi 4
 
 steps:
 (temporary decision using virtual network)  
