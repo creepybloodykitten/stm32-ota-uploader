@@ -1,48 +1,41 @@
-
 $rpiUser = "avopadla"
 $rpiHost = "192.168.196.173"
 $destinationPath = "/home/avopadla/ota_upg/files"
-
+$remotePythonScript = "/home/avopadla/ota_upg/flash_firmware.py"
+$remoteLogPath = "/home/avopadla/ota_upg/changelog.txt"
 
 try {
-    if ($args.Count -eq 0) {
-        throw "Error: No files or folders were dragged onto the shortcut. Please run the script by dragging items onto it."
+    if ($args.Count -ne 1) {
+        throw "Error: Please drag exactly ONE file onto this script. You provided $($args.Count) items."
+    }
+
+    $sourcePath = $args[0]
+    $item = Get-Item $sourcePath -ErrorAction Stop
+
+    if ($item.PSIsContainer) {
+        throw "Error: Folders are not supported. Please drag a single file."
     }
 
     Write-Host "--- Starting transfer to Raspberry Pi ---`n" -ForegroundColor Cyan
+    Write-Host "Processing file: $($item.FullName)" -ForegroundColor White
+    
+    scp $item.FullName "$($rpiUser)@$($rpiHost):$($destinationPath)"
 
-    foreach ($path in $args) {
-      
-        if (-not (Test-Path $path)) {
-            Write-Host "WARNING: Object not found at path: '$path'. It might be a part of a multi-file drag. Skipping." -ForegroundColor Yellow
-        }
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "SUCCESSFULLY transferred!`n" -ForegroundColor Green
         
-        $item = Get-Item $path
+        $remoteFilePath = "$destinationPath/$($item.Name)"
         
-        Write-Host "Processing: $($item.FullName)" -ForegroundColor White
-        
-        $scpArgs = @() 
+        $logMessage = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] File received: $remoteFilePath"
+        $sshLogCommand = "echo `"$logMessage`" >> $remoteLogPath"
+        ssh "$rpiUser@$rpiHost" $sshLogCommand
 
-        if ($item.PSIsContainer) {
-            Write-Host "This is a directory. Using recursive copy (-r)..."
-            $scpArgs += "-r"
-        }
-        else {
-            Write-Host "This is a file. Copying..."
-        }
-
-
-        $scpArgs += $item.FullName
-        $scpArgs += "$($rpiUser)@$($rpiHost):$($destinationPath)"
-        scp @scpArgs
-
-        # 0 means success. Any other value is an error.
-        if ($LASTEXITCODE -eq 0) {
-            Write-Host "SUCCESSFULLY transferred!`n" -ForegroundColor Green
-        }
-        else {
-            Write-Host "ERROR: SCP command failed with exit code $LASTEXITCODE.`n" -ForegroundColor Red
-        }
+        $sshPythonCommand = "sudo python3 $remotePythonScript `"$remoteFilePath`""
+        Write-Host "Running remote script: $sshPythonCommand" -ForegroundColor Cyan
+        ssh "$rpiUser@$rpiHost" $sshPythonCommand
+    }
+    else {
+        throw "ERROR: SCP command failed with exit code $LASTEXITCODE."
     }
 }
 catch {
@@ -50,7 +43,7 @@ catch {
     Write-Host $_.Exception.Message -ForegroundColor Yellow
 }
 finally {
-    Write-Host "--- All operations are complete. ---" -ForegroundColor Cyan
+    Write-Host "`n--- All operations are complete. ---" -ForegroundColor Cyan
     Read-Host "Press Enter to exit..."
     exit
 }
