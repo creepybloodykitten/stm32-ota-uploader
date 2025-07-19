@@ -1,0 +1,43 @@
+# Папки, генерируемые Keil
+Objects/
+Listings/
+Debug/
+DebugConfig/
+Release/
+build/
+STM32CubeMx/
+
+# files
+*.nikit #user
+*.o
+*.obj
+*.axf
+*.elf
+*.hex
+*.bin
+*.map
+*.bak
+*.lib
+*.lnp
+*.plg
+*.tra
+*.dep
+*.sfr
+*.d
+*.i
+*.crf
+*.sct.bak
+*.htm, *.html 
+
+# user IDE
+*.uvguix.*
+*.uvgui.*
+JLinkLog.txt
+JLinkSettings.ini
+
+# RTE (Runtime-Environment)
+RTE/
+
+
+.DS_Store
+Thumbs.db

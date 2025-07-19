@@ -1,0 +1,46 @@
+#include <stm32f10x.h>
+
+void rcc_init()
+{
+	RCC->CR|=RCC_CR_HSEON;
+	RCC->CR &= ~RCC_CR_PLLON; //OFF pll before change
+	while((RCC->CR & RCC_CR_HSERDY)==0);
+	
+	RCC->CR &= ~RCC_CR_PLLON;//CLEAR
+	RCC->CFGR &= ~(RCC_CFGR_PLLMULL | RCC_CFGR_PLLSRC);//CLEAR
+	RCC->CFGR |= (RCC_CFGR_PLLMULL9 | RCC_CFGR_PLLSRC_HSE);
+	RCC->CR |= RCC_CR_PLLON;
+	while (!(RCC->CR & RCC_CR_HSERDY)); 
+	
+	RCC->CFGR &=~RCC_CFGR_SW;//CLEAR
+	RCC->CFGR |=RCC_CFGR_SW_PLL;
+	while((RCC->CFGR & RCC_CFGR_SWS)!=RCC_CFGR_SWS_PLL);
+	
+}
+
+int main()
+{
+	rcc_init();
+	SystemCoreClockUpdate();
+	
+	//led EXTERNAL
+	RCC->APB2ENR|=RCC_APB2ENR_IOPCEN;
+	GPIOC->CRH &= ~(GPIO_CRH_CNF9 | GPIO_CRH_MODE9);
+	GPIOC->CRH |=~(GPIO_CRH_CNF9_0|GPIO_CRH_CNF9_1);
+	GPIOC->CRH |=(GPIO_CRH_MODE9_1);
+	
+		//led internal
+	RCC->APB2ENR|=RCC_APB2ENR_IOPAEN;
+	GPIOA->CRL &= ~(GPIO_CRL_CNF5 | GPIO_CRL_MODE5);
+	GPIOA->CRL |=~(GPIO_CRL_CNF5_0|GPIO_CRL_CNF5_1);
+	GPIOA->CRL |=(GPIO_CRL_MODE5_1);
+	
+	while(1)
+	{
+		GPIOC->BSRR|=GPIO_BSRR_BS9;
+		GPIOA->BSRR|=GPIO_BSRR_BS5;
+	}
+	
+	
+	return 0;
+}
