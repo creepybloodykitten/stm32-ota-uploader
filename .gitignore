@@ -30,10 +30,13 @@ STM32CubeMx/
 *.htm, *.html 
 
 Drivers/
+MDK-ARM/f411re(hal)
 *.ioc
 *.mxproject
 *.s
 *.sct
+*.htm
+*.html
 
 # user IDE
 *.uvguix.*
