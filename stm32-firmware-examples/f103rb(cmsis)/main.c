@@ -1,5 +1,7 @@
 #include <stm32f10x.h>
 
+unsigned long TIM2_interrupts=0;
+
 void rcc_init()
 {
 	RCC->CR|=RCC_CR_HSEON;
@@ -18,10 +20,30 @@ void rcc_init()
 	
 }
 
+void TIM2_init()
+{
+	RCC->APB1ENR|=RCC_APB1ENR_TIM2EN; //SHINA WITH TIM2 ON
+	
+	TIM2->PSC=7200-1;
+	TIM2->ARR=10000-1;
+	
+	TIM2->DIER|=TIM_DIER_UIE; //interapt enable with tim2 signal UIE-update interrupt enable
+	NVIC_EnableIRQ(TIM2_IRQn);
+	
+	TIM2->CR1|=TIM_CR1_CEN; //enable timer
+}
+
+void TIM2_IRQHandler()
+{
+	TIM2->SR &= ~TIM_SR_UIF;//IMPORTANT CLEAR FLAG TO EXIT HANDLER THEN!
+	TIM2_interrupts++;
+}
+
 int main()
 {
 	rcc_init();
 	SystemCoreClockUpdate();
+	TIM2_init();
 	
 	//led EXTERNAL
 	RCC->APB2ENR|=RCC_APB2ENR_IOPCEN;
@@ -37,7 +59,7 @@ int main()
 	
 	while(1)
 	{
-		GPIOC->BSRR|=GPIO_BSRR_BS9;
+		GPIOC->BSRR|=GPIO_BSRR_BR9;
 		GPIOA->BSRR|=GPIO_BSRR_BS5;
 	}
 	
