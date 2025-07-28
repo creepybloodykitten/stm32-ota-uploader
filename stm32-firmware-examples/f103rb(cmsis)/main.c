@@ -24,7 +24,7 @@ void TIM2_init()
 {
 	RCC->APB1ENR|=RCC_APB1ENR_TIM2EN; //SHINA WITH TIM2 ON
 	
-	TIM2->PSC=7200-1;
+	TIM2->PSC=7600-1;
 	TIM2->ARR=10000-1;
 	
 	TIM2->DIER|=TIM_DIER_UIE; //interapt enable with tim2 signal UIE-update interrupt enable
@@ -37,6 +37,14 @@ void TIM2_IRQHandler()
 {
 	TIM2->SR &= ~TIM_SR_UIF;//IMPORTANT CLEAR FLAG TO EXIT HANDLER THEN!
 	TIM2_interrupts++;
+	
+	if (GPIOA->ODR & (1 << 5)) 
+	{
+    GPIOA->BSRR = (1 << (5 + 16)); 
+	} 
+	else {
+			GPIOA->BSRR = (1 << 5);        
+	}
 }
 
 int main()
@@ -54,13 +62,12 @@ int main()
 		//led internal
 	RCC->APB2ENR|=RCC_APB2ENR_IOPAEN;
 	GPIOA->CRL &= ~(GPIO_CRL_CNF5 | GPIO_CRL_MODE5);
-	GPIOA->CRL |=~(GPIO_CRL_CNF5_0|GPIO_CRL_CNF5_1);
-	GPIOA->CRL |=(GPIO_CRL_MODE5_1);
+	GPIOA->CRL |=(1<<4*5);
 	
 	while(1)
 	{
 		GPIOC->BSRR|=GPIO_BSRR_BR9;
-		GPIOA->BSRR|=GPIO_BSRR_BS5;
+		//GPIOA->BSRR|=GPIO_BSRR_BS5;
 	}
 	
 	
