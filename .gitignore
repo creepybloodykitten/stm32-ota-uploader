@@ -1,4 +1,4 @@
-# Папки, генерируемые Keil
+
 Objects/
 Listings/
 Debug/
@@ -44,7 +44,6 @@ MDK-ARM/f411re(hal)
 JLinkLog.txt
 JLinkSettings.ini
 
-# RTE (Runtime-Environment)
 RTE/
 
 
