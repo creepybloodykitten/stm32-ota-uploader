@@ -5,6 +5,7 @@
 #include <QThread>
 #include <QMessageBox>
 #include <QCloseEvent>
+#include <QFileDialog>
 
 #include <libssh/libssh.h>
 #include "sshcontrol.h"
@@ -30,13 +31,14 @@ private slots:
     void onAddButtonClicked();
     void onDeleteButtonClicked();
     void onConfigureButtonClicked();
+    void onUpdFirmwareButtonClicked();
 
-
-    // Слоты для обработки сигналов от воркера
     void handleSshConnected();
     void handleSshDisconnected();
     void handleSshError(const QString &errorMessage);
     void handleSshData(const QString &data);
+    void handleLogMessage(const QString &message);
+    void handleFlashingFinished(bool success);
 
 private:
     void closeEvent(QCloseEvent *event) override;
@@ -49,7 +51,7 @@ private:
     QPushButton *deleteBoardButton;
 
     ssh_session my_ssh_session;
-    QThread *m_sshThread; // Поток
-    SshControl *m_sshControl; // Воркер
+    QThread *m_sshThread;
+    SshControl *m_sshControl;
 };
 #endif // MAINWINDOW_H

@@ -15,7 +15,6 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),my_ssh_session(nullptr)
-
 {
     this->setWindowTitle("stm32client");
     this->resize(800,600);
@@ -34,8 +33,6 @@ MainWindow::MainWindow(QWidget *parent)
     controlPanelLayout->addWidget(boardComboBox);
     controlPanelLayout->addWidget(addBoardButton);
     controlPanelLayout->addWidget(deleteBoardButton);
-
-
 
     QSpacerItem *horizontalSpacer = new QSpacerItem(40, 20, QSizePolicy::Expanding, QSizePolicy::Minimum);
     controlPanelLayout->addSpacerItem(horizontalSpacer);
@@ -56,8 +53,7 @@ MainWindow::MainWindow(QWidget *parent)
         "    font-weight: bold;"
         "}"
         );
-    //logOutput->appendPlainText("--- START ---");
-
+    logOutput->appendPlainText("--- Terminal init ---");
 
     QVBoxLayout *mainLayout = new QVBoxLayout();
 
@@ -72,22 +68,21 @@ MainWindow::MainWindow(QWidget *parent)
     connect(addBoardButton, &QPushButton::clicked, this, &MainWindow::onAddButtonClicked);
     connect(deleteBoardButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
     connect(configureBoardButton,&QPushButton::clicked, this,&MainWindow::onConfigureButtonClicked);
-
+    connect(updateFirmwareButton, &QPushButton::clicked, this, &MainWindow::onUpdFirmwareButtonClicked);
 
     m_sshThread = new QThread(this);
     m_sshControl = new SshControl();
     m_sshControl->moveToThread(m_sshThread);
 
-
     connect(m_sshControl, &SshControl::connected, this, &MainWindow::handleSshConnected);
     connect(m_sshControl, &SshControl::disconnected, this, &MainWindow::handleSshDisconnected);
     connect(m_sshControl, &SshControl::errorOccurred, this, &MainWindow::handleSshError);
     connect(m_sshControl, &SshControl::newData, this, &MainWindow::handleSshData);
-
+    connect(m_sshControl, &SshControl::logMessage, this, &MainWindow::handleLogMessage);
+    connect(m_sshControl, &SshControl::flashingFinished, this, &MainWindow::handleFlashingFinished);
 
     connect(m_sshThread, &QThread::finished, m_sshControl, &SshControl::deleteLater);
     connect(m_sshThread, &QThread::finished, m_sshThread, &QThread::deleteLater);
-
     m_sshThread->start();
 }
 
@@ -99,8 +94,6 @@ MainWindow::~MainWindow()
         ssh_free(my_ssh_session);
     }
 }
-
-
 
 
 void MainWindow::onAddButtonClicked()
@@ -142,28 +135,35 @@ void MainWindow::onConfigureButtonClicked()
             return;
         }
 
-
         if (m_sshControl->isConnected())
-        { // Простая проверка, можно сделать лучше
-            // Если да, то кнопка работает как "Отключиться"
+        {
             logOutput->appendPlainText("Отключаемся...");
-            //QMetaObject::invokeMethod(m_sshControl, "doDisconnect", Qt::QueuedConnection);
-            //connectButton->setEnabled(false); // Блокируем кнопку на время отключения
         }
 
-        logOutput->clear();
         logOutput->appendPlainText(QString("Подключение к %1...").arg(ip));
-        //connectButton->setEnabled(false); // Блокируем кнопку на время подключения
-
-        // Вызываем слот воркера в его потоке
         QMetaObject::invokeMethod(m_sshControl, "doConnect", Qt::QueuedConnection,
                                   Q_ARG(QString, ip),
                                   Q_ARG(QString, username),
                                   Q_ARG(QString, password));
-
     }
 }
 
+void MainWindow::onUpdFirmwareButtonClicked()
+{
+    if (!m_sshControl->isConnected()) {
+        QMessageBox::warning(this, "Ошибка", "Сначала необходимо установить SSH-соединение.");
+        return;
+    }
+
+    QString firmwarePath = QFileDialog::getOpenFileName(this, "Выберите файл прошивки", "", "Firmware Files (*.bin *.hex);;All Files (*)");
+    if (firmwarePath.isEmpty()) {
+        return; // Пользователь отменил выбор
+    }
+
+    //handleLogMessage("Приостановка мониторинга для обновления прошивки...\n");
+    QMetaObject::invokeMethod(m_sshControl, "performFirmwareUpdate", Qt::QueuedConnection,
+                              Q_ARG(QString, firmwarePath));
+}
 
 void MainWindow::handleSshConnected()
 {
@@ -186,18 +186,42 @@ void MainWindow::handleSshData(const QString &data)
     logOutput->appendPlainText(QString("Получены данные: %1").arg(data));
 }
 
-// Этот метод вызывается автоматически, когда пользователь пытается закрыть окно
+void MainWindow::handleLogMessage(const QString &message)
+{
+    logOutput->appendPlainText(message);
+}
+
+void MainWindow::handleFlashingFinished(bool success)
+{
+    if (success)
+    {
+        handleLogMessage("Операция завершена успешно.\n");
+    }
+    else
+    {
+        handleLogMessage("Операция завершилась с ошибкой.\n");
+    }
+
+    if (m_sshControl->isConnected())
+    {
+        handleLogMessage("Возобновление мониторинга...\n");
+        QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection);
+    }
+}
+
 void MainWindow::closeEvent(QCloseEvent *event)
 {
     logOutput->appendPlainText("Приложение закрывается, завершаем фоновый поток...");
 
     m_sshThread->quit();
 
-    if (!m_sshThread->wait(1)) {
+    if (!m_sshThread->wait(1))
+    {
         logOutput->appendPlainText("Поток не отвечает, принудительное завершение.");
         m_sshThread->terminate();
-        m_sshThread->wait(); // Ждем, пока система его убьет
-    } else {
+        m_sshThread->wait();
+    } else
+    {
         logOutput->appendPlainText("Поток успешно завершен.");
     }
     event->accept();

@@ -67,7 +67,7 @@ int main()
 	while(1)
 	{
 		GPIOC->BSRR|=GPIO_BSRR_BR9;
-		//GPIOA->BSRR|=GPIO_BSRR_BS5;
+		GPIOA->BSRR|=GPIO_BSRR_BS5;
 	}
 	
 	
