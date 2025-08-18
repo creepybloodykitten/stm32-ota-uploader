@@ -10,7 +10,7 @@ AddDialog::AddDialog(QWidget *parent) : QDialog(parent)
     nameLayout->addWidget(nameEdit);
 
     QHBoxLayout *pinLayout = new QHBoxLayout;
-    pinLayout->addWidget(new QLabel("pin:"));
+    pinLayout->addWidget(new QLabel("multiplexer pin(0-7):"));
     pinEdit = new QLineEdit;
     pinLayout->addWidget(pinEdit);
 
