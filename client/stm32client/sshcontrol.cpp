@@ -89,7 +89,7 @@ bool SshControl::isConnected() const
     return m_isAuthenticated;
 }
 
-void SshControl::startMonitoring(QString mulpin)
+void SshControl::startMonitoring(QString mulpin,bool with_usb)
 {
     // if (m_timer || m_channel) {
     //     doDisconnect(); // doDisconnect теперь безопасно все очищает
@@ -136,10 +136,16 @@ void SshControl::startMonitoring(QString mulpin)
     }
 
 
-    // const char* command = "python3 /home/avopadla/dht22env/sensors2.py";
-    // rc = ssh_channel_request_exec(m_channel, command);
-    QString cmd = QString("python3 /home/avopadla/dht22env/sensors2_multiplex.py %1").arg(mulpin);
-    rc = ssh_channel_request_exec(m_channel, cmd.toUtf8().constData());
+    if(with_usb==true)
+    {
+        const char* command = "python3 /home/avopadla/dht22env/sensors2.py";
+        rc = ssh_channel_request_exec(m_channel, command);
+    }
+    else
+    {
+        QString cmd = QString("python3 /home/avopadla/dht22env/sensors2_multiplex.py %1").arg(mulpin);
+        rc = ssh_channel_request_exec(m_channel, cmd.toUtf8().constData());}
+
     if (rc != SSH_OK)
     {
         ssh_channel_close(m_channel);
@@ -186,9 +192,7 @@ void SshControl::startMonitoring(QString mulpin)
 }
 
 
-
-
-void SshControl::performFirmwareUpdate(const QString &localFilePath)
+void SshControl::performFirmwareUpdate(const QString &localFilePath,bool with_usb)
 {
     if (!m_isAuthenticated) {
         emit logMessage("Ошибка: нет активного SSH-соединения.\n");
@@ -196,25 +200,23 @@ void SshControl::performFirmwareUpdate(const QString &localFilePath)
         return;
     }
 
-    m_firmwareUpdatePath = localFilePath; // Сохраняем путь для следующего шага
+    m_firmwareUpdatePath = localFilePath;
 
     // Проверяем, запущен ли мониторинг
     if (m_timer && m_timer->isActive()) {
         emit logMessage("Приостановка мониторинга для обновления прошивки...\n");
-        // Эта лямбда-функция "захватывает" this, чтобы иметь доступ к членам класса.
-        connect(this, &SshControl::monitoringStopped, this, [this]() {
-            // Лямбда вызывается, когда мониторинг остановлен.
-            // Теперь она напрямую вызывает наш единственный приватный слот.
-            _private_uploadAndFlashFirmware();
+        connect(this, &SshControl::monitoringStopped, this, [this,with_usb]() {
+            // Лямбда вызывается, когда мониторинг остановлен
+            _private_uploadAndFlashFirmware(with_usb);
         }, Qt::SingleShotConnection);
         stopMonitoring();
     } else {
         emit logMessage("Мониторинг не активен, начинаю прошивку...\n");
-        _private_uploadAndFlashFirmware();
+        _private_uploadAndFlashFirmware(with_usb);
     }
 }
 
-void SshControl::_private_uploadAndFlashFirmware()
+void SshControl::_private_uploadAndFlashFirmware(bool with_usb)
 {
     const QString localFilePath = m_firmwareUpdatePath;
     m_stop = false;
@@ -232,7 +234,7 @@ void SshControl::_private_uploadAndFlashFirmware()
     emit logMessage(QString("--- Начало процесса прошивки для файла %1 ---\n").arg(fileName));
     emit logMessage("[Шаг 1/2] Загрузка файла на Raspberry Pi (используя SFTP)...\n");
 
-    // 1. Создаем сессию SFTP
+
     sftp_session sftp = sftp_new(m_session);
     if (sftp == nullptr) {
         emit logMessage(QString("Критическая ошибка: не удалось создать SFTP сессию: %1\n").arg(ssh_get_error(m_session)));
@@ -240,7 +242,7 @@ void SshControl::_private_uploadAndFlashFirmware()
         return;
     }
 
-    // 2. Инициализируем сессию SFTP
+
     int rc = sftp_init(sftp);
     if (rc != SSH_OK) {
         emit logMessage(QString("Критическая ошибка: не удалось инициализировать SFTP сессию: %1\n").arg(sftp_get_error(sftp)));
@@ -301,6 +303,10 @@ void SshControl::_private_uploadAndFlashFirmware()
     }
 
     QString command = QString("sudo python3 %1 \"%2\"").arg(m_remotePythonScript, remoteFilePath);
+    if(with_usb==true)
+    {
+       command = QString("st-flash write \"%1\" 0x8000000").arg(remoteFilePath);
+    }
     emit logMessage(QString("Выполняется команда: %1\n").arg(command));
 
     rc = ssh_channel_request_exec(exec_channel, command.toUtf8().constData());
@@ -315,7 +321,6 @@ void SshControl::_private_uploadAndFlashFirmware()
     while ((bytesRead = ssh_channel_read(exec_channel, buffer, sizeof(buffer), 0)) > 0) {
         emit logMessage(QString::fromUtf8(buffer, bytesRead));
     }
-    // Читаем вывод ошибок от скрипта
     while ((bytesRead = ssh_channel_read(exec_channel, buffer, sizeof(buffer), 1)) > 0) {
         emit logMessage(QString::fromUtf8(buffer, bytesRead));
     }

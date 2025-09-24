@@ -10,8 +10,10 @@
 #include <QPlainTextEdit>
 #include <QMessageBox>
 
+
 #include "adddialog.h"
 #include "entrydialog.h"
+#include "sshcontrol.h"
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),my_ssh_session(nullptr)
@@ -27,9 +29,12 @@ MainWindow::MainWindow(QWidget *parent)
     deleteBoardButton=new QPushButton("Delete this board",this);
     configureBoardButton = new QPushButton("Config connection", this);
     updateFirmwareButton=new QPushButton("Update firmware to this board",this);
+    usb_usage= new QRadioButton("usb update(1 device only)",this);
+
 
     QHBoxLayout *controlPanelLayout = new QHBoxLayout();
     controlPanelLayout->addWidget(configureBoardButton);
+    controlPanelLayout->addWidget(usb_usage);
     controlPanelLayout->addWidget(boardComboBox);
     controlPanelLayout->addWidget(addBoardButton);
     controlPanelLayout->addWidget(deleteBoardButton);
@@ -69,6 +74,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(deleteBoardButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
     connect(configureBoardButton,&QPushButton::clicked, this,&MainWindow::onConfigureButtonClicked);
     connect(updateFirmwareButton, &QPushButton::clicked, this, &MainWindow::onUpdFirmwareButtonClicked);
+    connect(usb_usage, &QRadioButton::toggled, this, &MainWindow::onUsbUsageClicked);
 
     connect(boardComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onBoardSelectionChanged);
 
@@ -140,20 +146,18 @@ void MainWindow::onBoardSelectionChanged(int index)
         return;
     }
 
-    // Шаг 2: Получаем данные о выбранной плате.
+
     QString boardName = boardComboBox->itemText(index);
     int boardPin = boardComboBox->itemData(index).toInt();
 
     logOutput->appendPlainText(QString("--- Switched to board: %1 ---").arg(boardName));
 
-    // Шаг 3: Перезапускаем мониторинг, ЕСЛИ SSH-соединение уже установлено.
+
     if (m_sshControl->isConnected()) {
         logOutput->appendPlainText("SSH is connected. Restarting monitoring for the new board...");
-
-        // Вызываем тот же метод, что и раньше, но уже с новым, актуальным пином.
-        //нужно ли вызвать stopmonitoring?
         QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection,
-                                  Q_ARG(QString, QString::number(boardPin)));
+                                  Q_ARG(QString, QString::number(boardPin))
+                                  ,Q_ARG(bool,usb_usage->isChecked()));
     } else {
         logOutput->appendPlainText("SSH is not connected. Monitoring will begin once connection is established.");
     }
@@ -196,19 +200,40 @@ void MainWindow::onUpdFirmwareButtonClicked()
 
     QString firmwarePath = QFileDialog::getOpenFileName(this, "Выберите файл прошивки", "", "Firmware Files (*.bin *.hex);;All Files (*)");
     if (firmwarePath.isEmpty()) {
-        return; // Пользователь отменил выбор
+        return;
     }
 
     //handleLogMessage("Приостановка мониторинга для обновления прошивки...\n");
     QMetaObject::invokeMethod(m_sshControl, "performFirmwareUpdate", Qt::QueuedConnection,
-                              Q_ARG(QString, firmwarePath));
+                              Q_ARG(QString, firmwarePath),
+                              Q_ARG(bool,usb_usage->isChecked()));
+}
+
+
+
+
+
+void MainWindow::onUsbUsageClicked()
+{
+    if(usb_usage->isChecked())
+    {
+        boardComboBox->setVisible(false);
+        deleteBoardButton->setVisible(false);
+        addBoardButton->setVisible(false);
+    }
+    else
+    {
+        boardComboBox->setVisible(true);
+        deleteBoardButton->setVisible(true);
+        addBoardButton->setVisible(true);
+    }
 }
 
 void MainWindow::handleSshConnected()//отвечает за мониторинг после подключения
 {
     logOutput->appendPlainText("Подключение успешно. Запускаю мониторинг данных...");
     QString current_pin = boardComboBox->currentData().toString();
-    QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection, Q_ARG(QString, current_pin));
+    QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection, Q_ARG(QString, current_pin),Q_ARG(bool,usb_usage->isChecked()));
 }
 
 void MainWindow::handleSshDisconnected()
@@ -248,7 +273,7 @@ void MainWindow::handleFlashingFinished(bool success)
     {
         handleLogMessage("Возобновление мониторинга...\n");
         QString current_pin = boardComboBox->currentData().toString();
-        QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection, Q_ARG(QString, current_pin));
+        QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection, Q_ARG(QString, current_pin),Q_ARG(bool,usb_usage->isChecked()));
     }
 }
 

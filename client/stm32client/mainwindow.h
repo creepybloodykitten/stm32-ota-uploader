@@ -6,6 +6,7 @@
 #include <QMessageBox>
 #include <QCloseEvent>
 #include <QFileDialog>
+#include <QRadioButton>
 
 #include <libssh/libssh.h>
 #include "sshcontrol.h"
@@ -31,11 +32,13 @@ public:
     void set_ip(const QString &ip);
     void set_password(const QString &password);
 
+
 private slots:
     void onAddButtonClicked();
     void onDeleteButtonClicked();
     void onConfigureButtonClicked();
     void onUpdFirmwareButtonClicked();
+    void onUsbUsageClicked();
 
     void handleSshConnected();
     void handleSshDisconnected();
@@ -55,6 +58,7 @@ private:
     QPushButton *updateFirmwareButton;
     QPlainTextEdit *logOutput;
     QPushButton *deleteBoardButton;
+    QRadioButton *usb_usage;
 
     ssh_session my_ssh_session;
     QThread *m_sshThread;
