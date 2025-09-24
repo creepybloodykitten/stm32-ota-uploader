@@ -91,13 +91,6 @@ bool SshControl::isConnected() const
 
 void SshControl::startMonitoring(QString mulpin,bool with_usb)
 {
-    // if (m_timer || m_channel) {
-    //     doDisconnect(); // doDisconnect теперь безопасно все очищает
-    //     // Заново устанавливаем флаги, т.к. doDisconnect их сбрасывает
-    //     m_isAuthenticated = true;
-    //     m_stop = false;
-    // }
-
     if (m_timer) {
         m_timer->stop();
         m_timer->deleteLater();
@@ -202,7 +195,7 @@ void SshControl::performFirmwareUpdate(const QString &localFilePath,bool with_us
 
     m_firmwareUpdatePath = localFilePath;
 
-    // Проверяем, запущен ли мониторинг
+
     if (m_timer && m_timer->isActive()) {
         emit logMessage("Приостановка мониторинга для обновления прошивки...\n");
         connect(this, &SshControl::monitoringStopped, this, [this,with_usb]() {

@@ -47,8 +47,7 @@ try:
     GPIO.setmode(GPIO.BCM)
     for pin in SELECT_PINS:
         GPIO.setup(pin, GPIO.OUT)
-    # /dev/ttyAMA0 for uart
-    ser = serial.Serial('/dev/ttyACM0', baudrate=115200, timeout=1)
+    ser = serial.Serial('/dev/ttyAMA0', baudrate=115200, timeout=1)
     
     # --- Select the target device (happens once before the loop) ---
     select_device(device_to_contact)
