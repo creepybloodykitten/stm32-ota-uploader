@@ -10,6 +10,10 @@
 #include <libssh/libssh.h>
 #include "sshcontrol.h"
 
+struct BoardInfo {
+    QString name;
+    QString pin;
+};
 
 class QComboBox;
 class QPushButton;
@@ -40,6 +44,8 @@ private slots:
     void handleLogMessage(const QString &message);
     void handleFlashingFinished(bool success);
 
+    void onBoardSelectionChanged(int index);
+
 private:
     void closeEvent(QCloseEvent *event) override;
 
@@ -53,5 +59,7 @@ private:
     ssh_session my_ssh_session;
     QThread *m_sshThread;
     SshControl *m_sshControl;
+
+    std::vector<BoardInfo> m_boards;
 };
 #endif // MAINWINDOW_H

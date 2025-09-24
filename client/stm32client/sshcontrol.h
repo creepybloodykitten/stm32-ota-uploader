@@ -43,7 +43,7 @@ public slots:
 
     void doConnect(const QString &host, const QString &user, const QString &password);
     void doDisconnect();
-    void startMonitoring();
+    void startMonitoring(QString mulpin);
     void stopMonitoring();
     void performFirmwareUpdate(const QString &localFilePath);
 

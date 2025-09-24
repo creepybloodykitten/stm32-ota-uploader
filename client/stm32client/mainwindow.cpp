@@ -70,6 +70,8 @@ MainWindow::MainWindow(QWidget *parent)
     connect(configureBoardButton,&QPushButton::clicked, this,&MainWindow::onConfigureButtonClicked);
     connect(updateFirmwareButton, &QPushButton::clicked, this, &MainWindow::onUpdFirmwareButtonClicked);
 
+    connect(boardComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onBoardSelectionChanged);
+
     m_sshThread = new QThread(this);
     m_sshControl = new SshControl();
     m_sshControl->moveToThread(m_sshThread);
@@ -106,7 +108,12 @@ void MainWindow::onAddButtonClicked()
 
         if (!name.isEmpty() && !pin.isEmpty())
         {
-            boardComboBox->addItem(name + " (pin: " + pin + ")");
+            BoardInfo newBoard;
+            newBoard.name = name;
+            newBoard.pin = pin;
+            m_boards.push_back(newBoard);
+            boardComboBox->addItem((name + "(pin: " + pin + ")"),pin);
+            //boardComboBox->setCurrentIndex(boardComboBox->count() - 1);
         }
     }
 }
@@ -116,7 +123,39 @@ void MainWindow::onDeleteButtonClicked()
     int index = boardComboBox->currentIndex();
     if (index != -1)
     {
+        m_boards.erase(m_boards.begin() + index);
         boardComboBox->removeItem(index);
+        if(index==0)
+        {
+            QMetaObject::invokeMethod(m_sshControl, "stopMonitoring", Qt::QueuedConnection);
+        }
+    }
+
+}
+
+void MainWindow::onBoardSelectionChanged(int index)
+{
+    if (index == -1) {
+        logOutput->appendPlainText("--- No board selected ---");
+        return;
+    }
+
+    // Шаг 2: Получаем данные о выбранной плате.
+    QString boardName = boardComboBox->itemText(index);
+    int boardPin = boardComboBox->itemData(index).toInt();
+
+    logOutput->appendPlainText(QString("--- Switched to board: %1 ---").arg(boardName));
+
+    // Шаг 3: Перезапускаем мониторинг, ЕСЛИ SSH-соединение уже установлено.
+    if (m_sshControl->isConnected()) {
+        logOutput->appendPlainText("SSH is connected. Restarting monitoring for the new board...");
+
+        // Вызываем тот же метод, что и раньше, но уже с новым, актуальным пином.
+        //нужно ли вызвать stopmonitoring?
+        QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection,
+                                  Q_ARG(QString, QString::number(boardPin)));
+    } else {
+        logOutput->appendPlainText("SSH is not connected. Monitoring will begin once connection is established.");
     }
 }
 
@@ -165,10 +204,11 @@ void MainWindow::onUpdFirmwareButtonClicked()
                               Q_ARG(QString, firmwarePath));
 }
 
-void MainWindow::handleSshConnected()
+void MainWindow::handleSshConnected()//отвечает за мониторинг после подключения
 {
     logOutput->appendPlainText("Подключение успешно. Запускаю мониторинг данных...");
-    QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection); //entry point to logging
+    QString current_pin = boardComboBox->currentData().toString();
+    QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection, Q_ARG(QString, current_pin));
 }
 
 void MainWindow::handleSshDisconnected()
@@ -183,7 +223,9 @@ void MainWindow::handleSshError(const QString &errorMessage)
 
 void MainWindow::handleSshData(const QString &data)
 {
-    logOutput->appendPlainText(QString("Получены данные: %1").arg(data));
+    QString boardname=boardComboBox->currentText();
+    logOutput->appendPlainText(QString("Получены данные c %2: %1").arg(data).arg(boardname));
+
 }
 
 void MainWindow::handleLogMessage(const QString &message)
@@ -205,7 +247,8 @@ void MainWindow::handleFlashingFinished(bool success)
     if (m_sshControl->isConnected())
     {
         handleLogMessage("Возобновление мониторинга...\n");
-        QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection);
+        QString current_pin = boardComboBox->currentData().toString();
+        QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection, Q_ARG(QString, current_pin));
     }
 }
 
