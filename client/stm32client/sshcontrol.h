@@ -43,12 +43,12 @@ public slots:
 
     void doConnect(const QString &host, const QString &user, const QString &password);
     void doDisconnect();
-    void startMonitoring();
+    void startMonitoring(QString mulpin,bool with_usb);
     void stopMonitoring();
-    void performFirmwareUpdate(const QString &localFilePath);
+    void performFirmwareUpdate(const QString &localFilePath,bool with_usb);
 
 private slots:
-    void _private_uploadAndFlashFirmware();
+    void _private_uploadAndFlashFirmware(bool with_usb);
 
 private:
     const QString m_destinationPath = "/home/avopadla/ota_upg/files";

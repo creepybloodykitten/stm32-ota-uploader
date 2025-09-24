@@ -111,10 +111,10 @@ int main(void)
   {
 		if (DHT22_Read(&dht_data)) {
         sprintf(uart_buf, "Temperature: %.1f C, Humidity: %.1f %%\r\n", dht_data.temperature, dht_data.humidity);
-        HAL_UART_Transmit(&huart1, (uint8_t*)uart_buf, strlen(uart_buf), HAL_MAX_DELAY); 
+        HAL_UART_Transmit(&huart2, (uint8_t*)uart_buf, strlen(uart_buf), HAL_MAX_DELAY); 
     } else {
         sprintf(uart_buf, "Failed to read from DHT22\r\n");
-        HAL_UART_Transmit(&huart1, (uint8_t*)uart_buf, strlen(uart_buf), HAL_MAX_DELAY);
+        HAL_UART_Transmit(&huart2, (uint8_t*)uart_buf, strlen(uart_buf), HAL_MAX_DELAY);
     }
 		HAL_Delay(1000);
     /* USER CODE END WHILE */

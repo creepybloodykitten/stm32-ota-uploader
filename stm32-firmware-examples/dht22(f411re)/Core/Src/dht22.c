@@ -59,7 +59,9 @@ uint8_t DHT22_Read(DHT22_Data *data) {
         }
     }
 
-    if ((raw_data[0] + raw_data[1] + raw_data[2] + raw_data[3]) == raw_data[4]) {
+    //if ((raw_data[0] + raw_data[1] + raw_data[2] + raw_data[3]) == raw_data[4]) 
+		if ((uint8_t)(raw_data[0] + raw_data[1] + raw_data[2] + raw_data[3]) == raw_data[4])
+		{
         data->humidity = ((uint16_t)raw_data[0] << 8 | raw_data[1]) / 10.0f;
         data->temperature = ((uint16_t)raw_data[2] << 8 | raw_data[3]) / 10.0f;
         if (raw_data[2] & 0x80) {
