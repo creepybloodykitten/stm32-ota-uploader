@@ -1,3 +1,10 @@
+# Дистанционное обновление прошивки STM32 с использованием общего хоста(например Raspberry pi 4) по SSH
+
+
+
+
+
+
 # spot firmware update system of stm32 everywhere with connection to host raspberry pi 4
 
 
@@ -19,3 +26,5 @@
 
 
 <img width="1075" height="789" alt="image" src="https://github.com/user-attachments/assets/14c28a42-8cbb-4ca2-b9b6-be0d63a14d23" />
+
+Для использования вне локальной сети требуется использование сторонних сервисов(например ZeroTier)
