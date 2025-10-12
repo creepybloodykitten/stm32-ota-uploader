@@ -14,6 +14,7 @@ void SshControl::stopMonitoring()
     m_stop = true;
 }
 
+
 void SshControl::doConnect(const QString &host, const QString &user, const QString &password)
 {
     doDisconnect();
@@ -129,15 +130,17 @@ void SshControl::startMonitoring(QString mulpin,bool with_usb)
     }
 
 
-    if(with_usb==true)
+    QString command;
+    if(with_usb==true)//для rasberry pi 4 тут два разных порта считывания просто в первом случае ttyACM0
     {
-        const char* command = "python3 /home/avopadla/dht22env/sensors2.py";
-        rc = ssh_channel_request_exec(m_channel, command);
+        command = QString("python3 %1").arg(m_ScriptUsbPath);
     }
-    else
+    else//а во втором ttyAMA0(и в этом скрипте реализована логика использования мультиплексоров)
     {
-        QString cmd = QString("python3 /home/avopadla/dht22env/sensors2_multiplex.py %1").arg(mulpin);
-        rc = ssh_channel_request_exec(m_channel, cmd.toUtf8().constData());}
+        command = QString("python3 %1 %2").arg(m_ScriptMultiplexPath,mulpin);
+
+    }
+    rc = ssh_channel_request_exec(m_channel, command.toUtf8().constData());
 
     if (rc != SSH_OK)
     {
@@ -148,6 +151,7 @@ void SshControl::startMonitoring(QString mulpin,bool with_usb)
         return;
     }
 
+    //таймер используется для периодического чтения данных (вывода) из запущенного на удаленном сервере скрипта мониторинга
     m_timer = new QTimer(this);
     connect(m_timer, &QTimer::timeout, this, [this]() {
 
@@ -184,7 +188,7 @@ void SshControl::startMonitoring(QString mulpin,bool with_usb)
 
 }
 
-
+//публичный метод для начала прошивки
 void SshControl::performFirmwareUpdate(const QString &localFilePath,bool with_usb)
 {
     if (!m_isAuthenticated) {
@@ -195,11 +199,11 @@ void SshControl::performFirmwareUpdate(const QString &localFilePath,bool with_us
 
     m_firmwareUpdatePath = localFilePath;
 
-
+    //если мониторинг активен сначала останавливает его
     if (m_timer && m_timer->isActive()) {
         emit logMessage("Приостановка мониторинга для обновления прошивки...\n");
         connect(this, &SshControl::monitoringStopped, this, [this,with_usb]() {
-            // Лямбда вызывается, когда мониторинг остановлен
+            // лямбда вызывается, когда мониторинг остановлен
             _private_uploadAndFlashFirmware(with_usb);
         }, Qt::SingleShotConnection);
         stopMonitoring();
@@ -209,6 +213,7 @@ void SshControl::performFirmwareUpdate(const QString &localFilePath,bool with_us
     }
 }
 
+//приватный метод который выполняет всю работу - отправка файла и запуск команды прошивки
 void SshControl::_private_uploadAndFlashFirmware(bool with_usb)
 {
     const QString localFilePath = m_firmwareUpdatePath;
@@ -298,7 +303,12 @@ void SshControl::_private_uploadAndFlashFirmware(bool with_usb)
     QString command = QString("sudo python3 %1 \"%2\"").arg(m_remotePythonScript, remoteFilePath);
     if(with_usb==true)
     {
-       command = QString("st-flash write \"%1\" 0x8000000").arg(remoteFilePath);
+        command = QString("st-flash --reset write \"%1\" 0x8000000").arg(remoteFilePath);
+        if (remoteFilePath.endsWith(".hex", Qt::CaseInsensitive))
+        {
+            // Для .hex файла адрес не нужен
+            command = QString("st-flash --reset --format ihex write \"%1\"").arg(remoteFilePath);
+        }
     }
     emit logMessage(QString("Выполняется команда: %1\n").arg(command));
 

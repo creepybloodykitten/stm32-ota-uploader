@@ -15,6 +15,7 @@
 #include "entrydialog.h"
 #include "sshcontrol.h"
 
+
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent),my_ssh_session(nullptr)
 {
@@ -25,11 +26,11 @@ MainWindow::MainWindow(QWidget *parent)
     boardComboBox = new QComboBox(this);
     boardComboBox->setMinimumWidth(200);
 
-    addBoardButton = new QPushButton("Add board", this);
-    deleteBoardButton=new QPushButton("Delete this board",this);
-    configureBoardButton = new QPushButton("Config connection", this);
-    updateFirmwareButton=new QPushButton("Update firmware to this board",this);
-    usb_usage= new QRadioButton("usb update(1 device only)",this);
+    addBoardButton = new QPushButton("Добавить плату", this);
+    deleteBoardButton=new QPushButton("Удалить эту плату",this);
+    configureBoardButton = new QPushButton("Настройка подключения", this);
+    updateFirmwareButton=new QPushButton("Обновить прошивку",this);
+    usb_usage= new QRadioButton("Режим USB(1 устройство)",this);
 
 
     QHBoxLayout *controlPanelLayout = new QHBoxLayout();
@@ -70,11 +71,13 @@ MainWindow::MainWindow(QWidget *parent)
     this->setCentralWidget(centralWidget);
 
 
+    //связывание кнопок и слотов
     connect(addBoardButton, &QPushButton::clicked, this, &MainWindow::onAddButtonClicked);
     connect(deleteBoardButton, &QPushButton::clicked, this, &MainWindow::onDeleteButtonClicked);
     connect(configureBoardButton,&QPushButton::clicked, this,&MainWindow::onConfigureButtonClicked);
     connect(updateFirmwareButton, &QPushButton::clicked, this, &MainWindow::onUpdFirmwareButtonClicked);
     connect(usb_usage, &QRadioButton::toggled, this, &MainWindow::onUsbUsageClicked);
+
 
     connect(boardComboBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &MainWindow::onBoardSelectionChanged);
 
@@ -82,6 +85,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_sshControl = new SshControl();
     m_sshControl->moveToThread(m_sshThread);
 
+    //связывание сигналов и слотов
     connect(m_sshControl, &SshControl::connected, this, &MainWindow::handleSshConnected);
     connect(m_sshControl, &SshControl::disconnected, this, &MainWindow::handleSshDisconnected);
     connect(m_sshControl, &SshControl::errorOccurred, this, &MainWindow::handleSshError);
@@ -104,6 +108,7 @@ MainWindow::~MainWindow()
 }
 
 
+//функция для получения данных о новой плате(по uart)
 void MainWindow::onAddButtonClicked()
 {
     AddDialog dialog(this);
@@ -124,6 +129,7 @@ void MainWindow::onAddButtonClicked()
     }
 }
 
+
 void MainWindow::onDeleteButtonClicked()
 {
     int index = boardComboBox->currentIndex();
@@ -139,30 +145,31 @@ void MainWindow::onDeleteButtonClicked()
 
 }
 
+//смена выводящей платы(только для uart)
 void MainWindow::onBoardSelectionChanged(int index)
 {
     if (index == -1) {
-        logOutput->appendPlainText("--- No board selected ---");
+        logOutput->appendPlainText("--- Плата не выбрана ---");
         return;
     }
-
 
     QString boardName = boardComboBox->itemText(index);
     int boardPin = boardComboBox->itemData(index).toInt();
 
-    logOutput->appendPlainText(QString("--- Switched to board: %1 ---").arg(boardName));
+    logOutput->appendPlainText(QString("--- Переключение на : %1 ---").arg(boardName));
 
 
     if (m_sshControl->isConnected()) {
-        logOutput->appendPlainText("SSH is connected. Restarting monitoring for the new board...");
+        logOutput->appendPlainText("SSH подлючение установлено. Перезапуск мониторинга...");
         QMetaObject::invokeMethod(m_sshControl, "startMonitoring", Qt::QueuedConnection,
                                   Q_ARG(QString, QString::number(boardPin))
                                   ,Q_ARG(bool,usb_usage->isChecked()));
     } else {
-        logOutput->appendPlainText("SSH is not connected. Monitoring will begin once connection is established.");
+        logOutput->appendPlainText("SSH подлючение НЕ установлено. Мониторинг будет запущен после подключения.");
     }
 }
 
+//функция ЗАПУСКАЮЩАЯ процесс подулючения по SSH с введенными данными
 void MainWindow::onConfigureButtonClicked()
 {
     EntryDialog ent_dialog;
@@ -191,6 +198,7 @@ void MainWindow::onConfigureButtonClicked()
     }
 }
 
+//функция для отправки hex и bin файлов
 void MainWindow::onUpdFirmwareButtonClicked()
 {
     if (!m_sshControl->isConnected()) {
@@ -211,8 +219,7 @@ void MainWindow::onUpdFirmwareButtonClicked()
 
 
 
-
-
+//переключение режимов(usb/uart)
 void MainWindow::onUsbUsageClicked()
 {
     if(usb_usage->isChecked())
@@ -229,7 +236,8 @@ void MainWindow::onUsbUsageClicked()
     }
 }
 
-void MainWindow::handleSshConnected()//отвечает за мониторинг после подключения
+//промежуточная функция отвечающая за начало старта мониторинга(считывания данных с stm32) после подключения
+void MainWindow::handleSshConnected()
 {
     logOutput->appendPlainText("Подключение успешно. Запускаю мониторинг данных...");
     QString current_pin = boardComboBox->currentData().toString();
@@ -249,7 +257,7 @@ void MainWindow::handleSshError(const QString &errorMessage)
 void MainWindow::handleSshData(const QString &data)
 {
     QString boardname=boardComboBox->currentText();
-    logOutput->appendPlainText(QString("Получены данные c %2: %1").arg(data).arg(boardname));
+    logOutput->appendPlainText(QString("Получены данные c %2: %1").arg(data, boardname));
 
 }
 
@@ -258,6 +266,8 @@ void MainWindow::handleLogMessage(const QString &message)
     logOutput->appendPlainText(message);
 }
 
+
+//перезапуск мониторинга после обновления прошивки
 void MainWindow::handleFlashingFinished(bool success)
 {
     if (success)

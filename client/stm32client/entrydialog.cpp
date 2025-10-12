@@ -16,8 +16,8 @@ EntryDialog::EntryDialog(QWidget *parent)
     ip_edit->setText("192.168.196.173");
     password_edit->setText("123");
 
-    ok_button = new QPushButton("ok", this);
-    cancel_button = new QPushButton("cancel", this);
+    ok_button = new QPushButton("Подключиться", this);
+    cancel_button = new QPushButton("Отмена", this);
 
     QFormLayout *formLayout = new QFormLayout;
     formLayout->addRow("username:", username_edit);

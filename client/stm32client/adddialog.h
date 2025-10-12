@@ -7,7 +7,10 @@
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QLabel>
-
+/*
+ * класс для кнопки 'Add board' в случае прошивки по uart
+ * служит для получения и передачи данных о имени платы и номере пина (для rx и tx номер должен совпадать)
+ */
 class AddDialog : public QDialog
 {
     Q_OBJECT

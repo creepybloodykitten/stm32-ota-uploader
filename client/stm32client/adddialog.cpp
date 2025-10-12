@@ -14,7 +14,7 @@ AddDialog::AddDialog(QWidget *parent) : QDialog(parent)
     pinEdit = new QLineEdit;
     pinLayout->addWidget(pinEdit);
 
-    QPushButton *okButton = new QPushButton("add");
+    QPushButton *okButton = new QPushButton("Добавить");
 
     mainLayout->addLayout(nameLayout);
     mainLayout->addLayout(pinLayout);

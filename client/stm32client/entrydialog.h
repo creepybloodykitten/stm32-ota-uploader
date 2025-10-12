@@ -2,7 +2,10 @@
 #define ENTRYDIALOG_H
 
 #include <QDialog>
-
+/*
+ *класс для кнопки "Configure"
+ *требуется для передачи данных ip, имени пользователя хоста и его пароля и дальнейшего подключения по ssh с помощью класса
+ */
 class QLineEdit;
 class QPushButton;
 

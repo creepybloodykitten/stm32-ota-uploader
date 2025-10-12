@@ -11,15 +11,16 @@
 #include <libssh/libssh.h>
 #include "sshcontrol.h"
 
+class QComboBox;
+class QPushButton;
+class QPlainTextEdit;
+
 struct BoardInfo {
     QString name;
     QString pin;
 };
 
-class QComboBox;
-class QPushButton;
-class QPlainTextEdit;
-
+//основное окно
 class MainWindow : public QMainWindow
 {
     Q_OBJECT

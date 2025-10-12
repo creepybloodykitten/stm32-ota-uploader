@@ -19,6 +19,9 @@
 #include <fcntl.h>
 #endif
 
+/*
+ * класс для подключения по SSH, получения данных с stm32, отправки hex и bin прошивок
+ */
 class SshControl : public QObject
 {
     Q_OBJECT
@@ -51,8 +54,11 @@ private slots:
     void _private_uploadAndFlashFirmware(bool with_usb);
 
 private:
-    const QString m_destinationPath = "/home/avopadla/ota_upg/files";
-    const QString m_remotePythonScript = "/home/avopadla/ota_upg/flash_firmware.py";
+    const QString m_destinationPath = "/home/avopadla/ota_upg/files"; //путь куда перекидывать прошивки
+    const QString m_remotePythonScript = "/home/avopadla/ota_upg/flash_firmware.py"; //для usb режима не требуется
+
+    const QString m_ScriptUsbPath = "/home/avopadla/dht22env/sensors2.py";
+    const QString m_ScriptMultiplexPath = "/home/avopadla/dht22env/sensors2_multiplex.py";
 
     QString m_firmwareUpdatePath;
 
