@@ -9,11 +9,9 @@ sudo apt install stlink-tools
 sudo apt install stm32flash
 ```
 
-2)Установить libssh на устройство с которого будут отправляться прошивки
+2)В sshcontrol.h поменять константные пути на нужные
 
-3)В sshcontrol.h поменять константные пути на нужные
-
-4)Собрать проект 
+3)Собрать проект 
 
 
 <img width="1075" height="789" alt="image" src="https://github.com/user-attachments/assets/14c28a42-8cbb-4ca2-b9b6-be0d63a14d23" />
